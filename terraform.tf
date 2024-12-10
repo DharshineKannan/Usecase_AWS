@@ -233,10 +233,7 @@ resource "aws_launch_template" "asg_launch_template" {
   name_prefix   = "ASG-Launch-Template"
   image_id      = "ami-055e3d4f0bbeb5878"
   instance_type = "t2.micro"
-  iam_instance_profile {
-    name = aws_iam_instance_profile.s3_access_instance_profile.name
-  }
-  vpc_security_group_ids = [aws_security_group.public_SG.id]
+
 }
 
 resource "aws_autoscaling_group" "asg" {
@@ -244,17 +241,16 @@ resource "aws_autoscaling_group" "asg" {
   desired_capacity   = 2
   max_size           = 3
   min_size           = 1
-
+  vpc_zone_identifier = [ aws_subnet.publicsubnet1.id, aws_subnet.publicsubnet2.id ]
   launch_template {
     id      = aws_launch_template.asg_launch_template.id
     version = "$Latest"
   }
-  target_group_arns = [aws_lb_target_group.alb_tg.arn]
 }
 
 ## Creating an IAM Instance Profile
 resource "aws_iam_instance_profile" "s3_access_instance_profile" {
-  name = "s3-access-instance-profile-unique"
+  name = "s3-access-instance-profile10"
   role = aws_iam_role.s3_access_role.name
 }
 
