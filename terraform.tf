@@ -223,18 +223,19 @@ resource "aws_security_group" "private_SG" {
 
 ## Creating a Auto scaling group
 
+## Creating an Auto Scaling Group
 resource "aws_launch_template" "asg_launch_template" {
   name_prefix   = "ASG-Launch-Template"
   image_id      = "ami-055e3d4f0bbeb5878"
   instance_type = "t2.micro"
   iam_instance_profile {
-    name = aws_iam_instance_profile.s3_access_instance_profile.name
+    name = aws_iam_instance_profile.s3_access_instance_profile_unique.name
   }
-  security_group_names = [aws_security_group.public_SG.name]
+  vpc_security_group_ids = [aws_security_group.public_SG.id]
 }
 
 resource "aws_autoscaling_group" "asg" {
-  availability_zones = ["us-west-2a","us-west-2b"]
+  availability_zones = ["us-west-2a", "us-west-2b"]
   desired_capacity   = 2
   max_size           = 3
   min_size           = 1
@@ -314,7 +315,8 @@ resource "aws_iam_policy" "s3_access_policy" {
         Effect = "Allow",
         Action = "s3:*" ,
         Resource = [
-		      "aws_s3_bucket.s3_bucket.arn",
+		      aws_s3_bucket.s3_bucket.arn,
+          "${aws_s3_bucket.s3_bucket.arn}/*",
         ]
       }
     ]
