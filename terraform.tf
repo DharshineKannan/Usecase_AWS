@@ -229,7 +229,7 @@ resource "aws_launch_template" "asg_launch_template" {
   image_id      = "ami-055e3d4f0bbeb5878"
   instance_type = "t2.micro"
   iam_instance_profile {
-    name = aws_iam_instance_profile.s3_access_instance_profile_unique.name
+    name = aws_iam_instance_profile.s3_access_instance_profile20.name
   }
   vpc_security_group_ids = [aws_security_group.public_SG.id]
 }
