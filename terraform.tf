@@ -314,8 +314,8 @@ resource "aws_iam_policy" "s3_access_policy" {
         Effect = "Allow",
         Action = "s3:*" ,
         Resource = [
-		  "${aws_s3_bucket.s3_bucket.arn}",
-          "${aws_s3_bucket.s3_bucket.arn}/*" ,
+		      "aws_s3_bucket.s3_bucket.arn",
+          "aws_s3_bucket.s3_bucket.arn*" ,
         ]
       }
     ]
