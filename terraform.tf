@@ -3,7 +3,6 @@ provider "aws" {
   region = "us-west-2"
 }
 
-
 ## VPC Creation
 resource "aws_vpc" "main_vpc" {
   cidr_block = "10.0.0.0/16"
@@ -12,41 +11,39 @@ resource "aws_vpc" "main_vpc" {
   }
 }
 
-## PublicSubnet1
+## Public Subnet 1
 resource "aws_subnet" "publicsubnet1" {
-  vpc_id     = aws_vpc.main_vpc.id
-  cidr_block = "10.0.1.0/24"
-  availability_zone = "us-west-2a"
+  vpc_id                  = aws_vpc.main_vpc.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-west-2a"
   map_public_ip_on_launch = true
   tags = {
     Name = "PublicSubnet1"
   }
 }
 
-## PublicSubnet2
+## Public Subnet 2
 resource "aws_subnet" "publicsubnet2" {
-  vpc_id     = aws_vpc.main_vpc.id
-  cidr_block = "10.0.2.0/24"
-  availability_zone = "us-west-2b"
+  vpc_id                  = aws_vpc.main_vpc.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-west-2b"
   map_public_ip_on_launch = true
   tags = {
     Name = "PublicSubnet2"
   }
 }
 
-
-## PrivateSubnet
+## Private Subnet
 resource "aws_subnet" "privatesubnet" {
-  vpc_id     = aws_vpc.main_vpc.id
-  cidr_block = "10.0.3.0/24"
+  vpc_id            = aws_vpc.main_vpc.id
+  cidr_block        = "10.0.3.0/24"
   availability_zone = "us-west-2a"
   tags = {
     Name = "PrivateSubnet"
   }
 }
 
-## Internet gateway - to allow vpc to internet
-
+## Internet Gateway
 resource "aws_internet_gateway" "int_gate" {
   vpc_id = aws_vpc.main_vpc.id
   tags = {
@@ -78,17 +75,16 @@ resource "aws_route_table_association" "public_rt_assoc2" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-## Instance 1 in private subnet
+## Instance in Private Subnet
 resource "aws_instance" "private_instance" {
-  ami           = "ami-055e3d4f0bbeb5878"  
-  instance_type = "t2.micro"
+  ami               = "ami-055e3d4f0bbeb5878"
+  instance_type     = "t2.micro"
   availability_zone = "us-west-2a"
-  subnet_id = aws_subnet.privatesubnet.id
+  subnet_id         = aws_subnet.privatesubnet.id
   tags = {
     Name = "PrivateInstance"
   }
 }
-
 
 ## Application Load Balancer
 resource "aws_lb" "application_LB" {
@@ -99,7 +95,6 @@ resource "aws_lb" "application_LB" {
   subnets            = [aws_subnet.publicsubnet1.id, aws_subnet.publicsubnet2.id]
 }
 
-
 ## Network Load Balancer
 resource "aws_lb" "network_LB" {
   name               = "PrivateNLB"
@@ -108,19 +103,17 @@ resource "aws_lb" "network_LB" {
   subnets            = [aws_subnet.privatesubnet.id]
 }
 
-## Target group by application load balancer
-
+## Target Group for Application Load Balancer
 resource "aws_lb_target_group" "alb_tg" {
-  name     = "Application-LB-TG"
+  name     = "Application-LB-TG-Unique"
   port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.main_vpc.id
 }
 
-## Target group by network load balancer
-
+## Target Group for Network Load Balancer
 resource "aws_lb_target_group" "nlb_tg" {
-  name     = "Network-LB-TG"
+  name     = "Network-LB-TG-Unique"
   port     = 80
   protocol = "TCP"
   vpc_id   = aws_vpc.main_vpc.id
@@ -175,13 +168,12 @@ resource "aws_security_group" "lb_sg" {
   }
 }
 
-
 ## Security Group for Public Subnet
 resource "aws_security_group" "public_SG" {
   name        = "Public-SG"
   description = "Security group to allow HTTP and SSH to Private Subnet"
-  vpc_id      = aws_vpc.main_vpc.id 
-  
+  vpc_id      = aws_vpc.main_vpc.id
+
   ingress {
     description = "Allow HTTP"
     from_port   = 80
@@ -197,16 +189,24 @@ resource "aws_security_group" "public_SG" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-   tags = {
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
     Name = "Public-SG"
   }
 }
 
-# Security group for the Private Subnet
+## Security Group for Private Subnet
 resource "aws_security_group" "private_SG" {
   name        = "Private-SG"
   description = "Allow traffic from public_sg only"
-  vpc_id      = aws_vpc.main_vpc.id   
+  vpc_id      = aws_vpc.main_vpc.id
 
   ingress {
     description     = "Allow traffic from public_sg"
@@ -215,13 +215,18 @@ resource "aws_security_group" "private_SG" {
     protocol        = "-1"
     security_groups = [aws_security_group.public_SG.id]
   }
-   tags = {
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
     Name = "Private-SG"
   }
 }
-
-
-## Creating a Auto scaling group
 
 ## Creating an Auto Scaling Group
 resource "aws_launch_template" "asg_launch_template" {
@@ -247,11 +252,9 @@ resource "aws_autoscaling_group" "asg" {
   target_group_arns = [aws_lb_target_group.alb_tg.arn]
 }
 
-
-## Creating a IAM instance profile - used to attach an iam role to an ec2 instance
-
-resource "aws_iam_instance_profile" "s3_access_instance_profile"{
-  name = "s3-access-instance-profile10"
+## Creating an IAM Instance Profile
+resource "aws_iam_instance_profile" "s3_access_instance_profile" {
+  name = "s3-access-instance-profile-unique"
   role = aws_iam_role.s3_access_role.name
 }
 
