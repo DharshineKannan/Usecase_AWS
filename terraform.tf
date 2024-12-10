@@ -250,14 +250,14 @@ resource "aws_autoscaling_group" "asg" {
 ## Creating a IAM instance profile - used to attach an iam role to an ec2 instance
 
 resource "aws_iam_instance_profile" "s3_access_instance_profile"{
-  name = "s3-access-instance-profile"
+  name = "s3-access-instance-profile10"
   role = aws_iam_role.s3_access_role.name
 }
 
 
 ## S3 Bucket
 resource "aws_s3_bucket" "s3_bucket" {
-  bucket = "my-unique-bucket"
+  bucket = "dharshine-20-unique-bucket"
 
   tags = {
     Name = "Mybucket"
@@ -315,7 +315,6 @@ resource "aws_iam_policy" "s3_access_policy" {
         Action = "s3:*" ,
         Resource = [
 		      "aws_s3_bucket.s3_bucket.arn",
-          "aws_s3_bucket.s3_bucket.arn*" ,
         ]
       }
     ]
