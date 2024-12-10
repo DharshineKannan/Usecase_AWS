@@ -257,10 +257,10 @@ resource "aws_iam_instance_profile" "s3_access_instance_profile"{
 
 ## S3 Bucket
 resource "aws_s3_bucket" "s3_bucket" {
-  bucket = "my-bucket"
+  bucket = "my-unique-bucket"
 
   tags = {
-    Name = "My bucket"
+    Name = "Mybucket"
   }
 }
 
