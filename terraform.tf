@@ -237,7 +237,6 @@ resource "aws_launch_template" "asg_launch_template" {
 }
 
 resource "aws_autoscaling_group" "asg" {
-  availability_zones = ["us-west-2a", "us-west-2b"]
   desired_capacity   = 2
   max_size           = 3
   min_size           = 1
