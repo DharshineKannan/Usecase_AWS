@@ -216,26 +216,23 @@ resource "aws_security_group" "private_SG" {
     security_groups = [aws_security_group.public_SG.id]
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = {
     Name = "Private-SG"
   }
 }
 
-## Creating an Auto Scaling Group
+## Creating an Auto Scaling Launch Template
 resource "aws_launch_template" "asg_launch_template" {
   name_prefix   = "ASG-Launch-Template"
   image_id      = "ami-055e3d4f0bbeb5878"
   instance_type = "t2.micro"
+  iam_instance_profile {
+    name = aws_iam_instance_profile.s3_access_instance_profile.name
+  }
 
 }
 
+## Creating an Auto Scaling Group
 resource "aws_autoscaling_group" "asg" {
   desired_capacity   = 2
   max_size           = 3
@@ -253,6 +250,11 @@ resource "aws_iam_instance_profile" "s3_access_instance_profile" {
   role = aws_iam_role.s3_access_role.name
 }
 
+# Create a ALB Target Group attachment to attach Load Balancer
+resource "aws_autoscaling_attachment" "asg_lb_attach" {
+  autoscaling_group_name = aws_autoscaling_group.asg.id
+  lb_target_group_arn    = aws_lb_target_group.alb_tg.arn
+}
 
 ## S3 Bucket
 resource "aws_s3_bucket" "s3_bucket" {
