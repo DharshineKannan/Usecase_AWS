@@ -65,107 +65,16 @@ resource "aws_route_table" "public_rt" {
   }
 }
 
+## Attaching Route Table to Public Subnet 1
 resource "aws_route_table_association" "public_rt_assoc1" {
   subnet_id      = aws_subnet.publicsubnet1.id
   route_table_id = aws_route_table.public_rt.id
 }
 
+## Attaching Route Table to Public Subnet 2
 resource "aws_route_table_association" "public_rt_assoc2" {
   subnet_id      = aws_subnet.publicsubnet2.id
   route_table_id = aws_route_table.public_rt.id
-}
-
-## Instance in Private Subnet
-resource "aws_instance" "private_instance" {
-  ami               = "ami-055e3d4f0bbeb5878"
-  instance_type     = "t2.micro"
-  availability_zone = "us-west-2a"
-  subnet_id         = aws_subnet.privatesubnet.id
-  tags = {
-    Name = "PrivateInstance"
-  }
-}
-
-## Application Load Balancer
-resource "aws_lb" "application_LB" {
-  name               = "PublicALB"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.lb_sg.id]
-  subnets            = [aws_subnet.publicsubnet1.id, aws_subnet.publicsubnet2.id]
-}
-
-## Network Load Balancer
-resource "aws_lb" "network_LB" {
-  name               = "PrivateNLB"
-  internal           = false
-  load_balancer_type = "network"
-  subnets            = [aws_subnet.privatesubnet.id]
-}
-
-## Target Group for Application Load Balancer
-resource "aws_lb_target_group" "alb_tg" {
-  name     = "Application-LB-TG-Unique"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main_vpc.id
-}
-
-## Target Group for Network Load Balancer
-resource "aws_lb_target_group" "nlb_tg" {
-  name     = "Network-LB-TG-Unique"
-  port     = 80
-  protocol = "TCP"
-  vpc_id   = aws_vpc.main_vpc.id
-}
-
-## Listener for ALB
-resource "aws_lb_listener" "alb_listener" {
-  load_balancer_arn = aws_lb.application_LB.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.alb_tg.arn
-  }
-}
-
-## Listener for NLB
-resource "aws_lb_listener" "nlb_listener" {
-  load_balancer_arn = aws_lb.network_LB.arn
-  port              = 80
-  protocol          = "TCP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.nlb_tg.arn
-  }
-}
-
-## Security Group for Load Balancers
-resource "aws_security_group" "lb_sg" {
-  name        = "LB-SG"
-  description = "Security group for Load Balancers"
-  vpc_id      = aws_vpc.main_vpc.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "LB-SG"
-  }
 }
 
 ## Security Group for Public Subnet
@@ -221,6 +130,85 @@ resource "aws_security_group" "private_SG" {
   }
 }
 
+## Instance in Private Subnet
+resource "aws_instance" "private_instance" {
+  ami               = "ami-055e3d4f0bbeb5878"
+  instance_type     = "t2.micro"
+  availability_zone = "us-west-2a"
+  subnet_id         = aws_subnet.privatesubnet.id
+  tags = {
+    Name = "PrivateInstance"
+  }
+}
+
+## Application Load Balancer
+resource "aws_lb" "application_LB" {
+  name               = "PublicALB"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.lb_sg.id]
+  subnets            = [aws_subnet.publicsubnet1.id, aws_subnet.publicsubnet2.id]
+}
+
+## Target Group for Application Load Balancer
+resource "aws_lb_target_group" "alb_tg" {
+  name     = "Application-LB-TG-Unique"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main_vpc.id
+}
+
+## Listener for ALB
+resource "aws_lb_listener" "alb_listener" {
+  load_balancer_arn = aws_lb.application_LB.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.alb_tg.arn
+  }
+}
+
+
+## Network Load Balancer
+resource "aws_lb" "network_LB" {
+  name               = "PrivateNLB"
+  internal           = false
+  load_balancer_type = "network"
+  subnets            = [aws_subnet.privatesubnet.id]
+}
+
+
+## Target Group for Network Load Balancer
+resource "aws_lb_target_group" "nlb_tg" {
+  name     = "Network-LB-TG-Unique"
+  port     = 80
+  protocol = "TCP"
+  vpc_id   = aws_vpc.main_vpc.id
+  target_type = "instance"
+}
+
+
+## Listener for NLB
+resource "aws_lb_listener" "nlb_listener" {
+  load_balancer_arn = aws_lb.network_LB.arn
+  port              = 80
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.nlb_tg.arn
+  }
+}
+
+## Attaching NLB Target Group to Private Instance
+resource "aws_lb_target_group_attachment" "nlb_tg_attach" {
+  target_group_arn = aws_lb_target_group.nlb_tg.arn
+  target_id        = aws_instance.private_instance.id
+  port             = 80
+}
+
 ## Creating an Auto Scaling Launch Template
 resource "aws_launch_template" "asg_launch_template" {
   name_prefix   = "ASG-Launch-Template"
@@ -250,11 +238,12 @@ resource "aws_iam_instance_profile" "s3_access_instance_profile" {
   role = aws_iam_role.s3_access_role.name
 }
 
-# Create a ALB Target Group attachment to attach Load Balancer
+# Attaching ALB Target Group to ASG
 resource "aws_autoscaling_attachment" "asg_lb_attach" {
   autoscaling_group_name = aws_autoscaling_group.asg.id
   lb_target_group_arn    = aws_lb_target_group.alb_tg.arn
 }
+
 
 ## S3 Bucket
 resource "aws_s3_bucket" "s3_bucket" {
@@ -282,7 +271,6 @@ resource "aws_s3_bucket_public_access_block" "s3_access" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
 
 ## Creating IAM Role
 resource "aws_iam_role" "s3_access_role" {
