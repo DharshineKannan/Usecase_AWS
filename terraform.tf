@@ -142,6 +142,7 @@ resource "aws_instance" "private_instance" {
   instance_type     = "t2.micro"
   availability_zone = "us-west-2a"
   subnet_id         = aws_subnet.privatesubnet.id
+  vpc_security_group_ids = [aws_security_group.private_SG.id]
   tags = {
     Name = "PrivateInstance"
   }
@@ -233,6 +234,7 @@ resource "aws_launch_template" "asg_launch_template" {
   name_prefix   = "ASG-Launch-Template"
   image_id      = "ami-055e3d4f0bbeb5878"
   instance_type = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.public_SG.id]
   iam_instance_profile {
     name = aws_iam_instance_profile.s3_access_instance_profile.name
   }
