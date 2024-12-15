@@ -152,7 +152,7 @@ resource "aws_lb" "application_LB" {
   name               = "PublicALB"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.lb_sg.id]
+  security_groups    = [aws_security_group.public_SG.id]
   subnets            = [aws_subnet.publicsubnet1.id, aws_subnet.publicsubnet2.id]
 }
 
