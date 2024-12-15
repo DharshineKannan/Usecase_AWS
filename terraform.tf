@@ -80,7 +80,7 @@ resource "aws_route_table_association" "public_rt_assoc2" {
 ## Security Group for Public Subnet
 resource "aws_security_group" "public_SG" {
   name        = "Public-SG"
-  description = "Security group to allow HTTP and SSH to Private Subnet"
+  description = "Security group to allow HTTP and SSH to Public Subnet"
   vpc_id      = aws_vpc.main_vpc.id
 
   ingress {
@@ -124,6 +124,12 @@ resource "aws_security_group" "private_SG" {
     protocol        = "-1"
     security_groups = [aws_security_group.public_SG.id]
   }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   tags = {
     Name = "Private-SG"
@@ -146,16 +152,8 @@ resource "aws_lb" "application_LB" {
   name               = "PublicALB"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.public_SG.id]
+  security_groups    = [aws_security_group.lb_sg.id]
   subnets            = [aws_subnet.publicsubnet1.id, aws_subnet.publicsubnet2.id]
-}
-
-## Target Group for Application Load Balancer
-resource "aws_lb_target_group" "alb_tg" {
-  name     = "Application-LB-TG-Unique"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main_vpc.id
 }
 
 ## Listener for ALB
@@ -170,6 +168,21 @@ resource "aws_lb_listener" "alb_listener" {
   }
 }
 
+## Target Group for Application Load Balancer
+resource "aws_lb_target_group" "alb_tg" {
+  name     = "Application-LB-TG-Unique"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main_vpc.id
+  health_check {
+    path                = "/" 
+    interval            = 30 
+    timeout             = 5 
+    healthy_threshold   = 2 
+    unhealthy_threshold = 2 
+  }
+}
+
 
 ## Network Load Balancer
 resource "aws_lb" "network_LB" {
@@ -178,17 +191,6 @@ resource "aws_lb" "network_LB" {
   load_balancer_type = "network"
   subnets            = [aws_subnet.privatesubnet.id]
 }
-
-
-## Target Group for Network Load Balancer
-resource "aws_lb_target_group" "nlb_tg" {
-  name     = "Network-LB-TG-Unique"
-  port     = 80
-  protocol = "TCP"
-  vpc_id   = aws_vpc.main_vpc.id
-  target_type = "instance"
-}
-
 
 ## Listener for NLB
 resource "aws_lb_listener" "nlb_listener" {
@@ -201,6 +203,23 @@ resource "aws_lb_listener" "nlb_listener" {
     target_group_arn = aws_lb_target_group.nlb_tg.arn
   }
 }
+
+## Target Group for Network Load Balancer
+resource "aws_lb_target_group" "nlb_tg" {
+  name     = "Network-LB-TG-Unique"
+  port     = 80
+  protocol = "TCP"
+  vpc_id   = aws_vpc.main_vpc.id
+  target_type = "instance"
+  health_check {
+    protocol            = "TCP"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
 
 ## Attaching NLB Target Group to Private Instance
 resource "aws_lb_target_group_attachment" "nlb_tg_attach" {
